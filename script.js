@@ -1,24 +1,24 @@
 const $ = id => document.getElementById(id);
 
-// 14 original local wallpapers
-const newWallpapers = [
-  { id: 100, title: "Silver Man", category: "Dark", image: "dark/3b958df9-8590-4be2-b6f7-0534d01235f8.png", trending: true },
-  { id: 101, title: "Lion", category: "Dark", image: "dark/5fe3b060-00cd-45aa-8dbc-fb4ff36832a1.webp", trending: true },
-  { id: 102, title: "Tiger", category: "Dark", image: "dark/80ce2949-9d2f-4357-968c-b007bba3e2af.webp" },
-  { id: 103, title: "Thomas Shelby", category: "Dark", image: "dark/97dfc192-98b6-4d7e-916b-de304b15652f.webp" },
-  { id: 104, title: "Moon", category: "Dark", image: "dark/a0d68f78-0f26-4b96-819b-04d5132f43b6.webp" },
-  { id: 105, title: "BMW", category: "Dark", image: "dark/a228801b-61ea-4c32-9bf0-1f6747248f8c.webp", trending: true },
-  { id: 106, title: "Eagle", category: "Dark", image: "dark/a779fbbe-607e-450f-a208-09f9b8335e0f.webp" },
-  { id: 107, title: "Silver Tom", category: "Dark", image: "dark/b935c3fd-c63c-4437-b34a-addecc942ec5.webp" },
-  { id: 108, title: "Focus", category: "Dark", image: "dark/be732b6b-7853-483d-a337-5ce98ccb23f2.webp" },
-  { id: 109, title: "Rose", category: "Dark", image: "dark/c84713fb-1d58-4e56-ad14-5d29230ad240.webp" },
-  { id: 110, title: "Silver Man", category: "Dark", image: "dark/Chrome Noir Gentleman.png" },
-  { id: 111, title: "Galaxy Car", category: "Dark", image: "dark/f203693d-7a75-4dba-9fde-fb2e0460331c.webp" },
-  { id: 112, title: "Wolf", category: "Dark", image: "dark/Gemini_Generated_Image_t9bcq9t9bcq9t9bc.jpg", trending: true },
-  { id: 113, title: "Tom", category: "Dark", image: "dark/Gemini_Generated_Image_y51bwty51bwty51b.jpg" }
-];
+// Keep the original display names and trending selections for the first 14 wallpapers.
+const wallpaperMetadata = {
+  100: { title: "Silver Man", trending: true },
+  101: { title: "Lion", trending: true },
+  102: { title: "Tiger" },
+  103: { title: "Thomas Shelby" },
+  104: { title: "Moon" },
+  105: { title: "BMW", trending: true },
+  106: { title: "Eagle" },
+  107: { title: "Silver Tom" },
+  108: { title: "Focus" },
+  109: { title: "Rose" },
+  110: { title: "Silver Man" },
+  111: { title: "Galaxy Car" },
+  112: { title: "Wolf", trending: true },
+  113: { title: "Tom" }
+};
 
-let wallpapers = [...newWallpapers];
+let wallpapers = [];
 let currentCategory = "All";
 let currentPage = "home";
 let currentWallpaper = null;
@@ -71,9 +71,6 @@ function renderWallpapers() {
     currentPage === "favorites" ? "Your Favorites" :
     currentPage === "trending" ? "Trending Wallpapers" :
     "Discover Wallpapers";
-
-  $("wallpaperCount").textContent =
-    filtered.length + " WALLPAPERS";
 
   $("emptyState").classList.toggle(
     "hidden",
@@ -339,5 +336,26 @@ document.addEventListener("keydown", event => {
   }
 });
 
-// Initial loading
-renderWallpapers();
+// Load the complete wallpaper collection from wallpapers.json.
+async function loadWallpapers() {
+  try {
+    const response = await fetch("./wallpapers.json");
+    if (!response.ok) throw new Error("Could not load wallpapers.json");
+
+    const collection = await response.json();
+    if (!Array.isArray(collection)) throw new Error("Wallpaper collection is invalid");
+
+    wallpapers = collection.map(wallpaper => ({
+      ...wallpaper,
+      ...(wallpaperMetadata[wallpaper.id] || {})
+    }));
+
+    renderWallpapers();
+  } catch (error) {
+    console.error("NOIRIX wallpaper loading failed:", error);
+    wallpapers = [];
+    renderWallpapers();
+  }
+}
+
+loadWallpapers();
