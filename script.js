@@ -238,7 +238,7 @@ $("downloadBtn").addEventListener("click", async () => {
   button.textContent = "PREPARING DOWNLOAD...";
 
   try {
-    const response = await fetch(currentWallpaper.image);
+    const response = await fetch(wallpaperAssetUrl(currentWallpaper.image));
 
     if (!response.ok) {
       throw new Error("Image download failed");
@@ -264,7 +264,7 @@ $("downloadBtn").addEventListener("click", async () => {
     button.textContent = "DOWNLOAD STARTED ✓";
   } catch (error) {
     button.textContent = "OPENING IMAGE";
-    window.open(currentWallpaper.image, "_blank");
+    window.open(wallpaperAssetUrl(currentWallpaper.image), "_blank");
   }
 
   setTimeout(() => {
