@@ -27,7 +27,7 @@ let favorites = [];
 
 // Resolve every wallpaper from the GitHub Pages project root, not the current page URL.
 const wallpaperAssetUrl = path =>
-  new URL(`/Noirix/${String(path).replace(/^\\/+/, "")}`, window.location.origin).href;
+  new URL(`/Noirix/${String(path).replace(/^\/+/, "")}`, window.location.origin).href;
 
 try {
   const saved = JSON.parse(localStorage.getItem("noirixFavorites") || "[]");
