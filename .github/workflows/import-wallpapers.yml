@@ -20,57 +20,68 @@ jobs:
           curl -fL --retry 3 "$ASSET_URL" -o /tmp/noirix-wallpapers.zip
           unzip -l /tmp/noirix-wallpapers.zip | head -40
 
-      - name: Import images and update wallpaper catalogue
+      - name: Import using the original approved wallpaper names
         run: |
           python3 - <<'PY'
-          import json, zipfile, pathlib, re, hashlib, shutil
+          import json, zipfile, pathlib, shutil, collections
           archive = '/tmp/noirix-wallpapers.zip'
           root = pathlib.Path('.')
           catalogue = root / 'wallpapers.json'
+          manifest_path = root / 'wallpaper-import-manifest.json'
           records = json.loads(catalogue.read_text(encoding='utf-8'))
-          known = {str(x.get('image','')).lower() for x in records}
-          next_id = max([int(x.get('id', 0)) for x in records if str(x.get('id','')).isdigit()] + [0]) + 1
-          aliases = {
-            'car':'Cars','cars':'Cars','space':'Space','abstract':'Abstract',
-            'anime':'Anime','nature':'Nature','dark':'Dark','aesthetic':'Aesthetic',
-            'animals':'Animals','animal':'Animals','live':'Live','aura':'Aura'
-          }
-          allowed = {'.jpg','.jpeg','.png','.webp','.avif'}
-          added = 0
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+
+          existing_ids = {int(x['id']) for x in records if str(x.get('id', '')).isdigit()}
+          existing_images = {str(x.get('image', '')).lower() for x in records}
+          source_names = [str(x['source_file']) for x in manifest]
+          if len(source_names) != len(set(n.lower() for n in source_names)):
+              raise SystemExit('Manifest contains duplicate source filenames.')
+          if any(int(x['id']) in existing_ids for x in manifest):
+              raise SystemExit('Manifest IDs already exist in wallpapers.json; refusing to overwrite.')
+
+          allowed = {'.jpg', '.jpeg', '.png', '.webp', '.avif'}
           with zipfile.ZipFile(archive) as z:
-            for info in z.infolist():
-              if info.is_dir(): continue
-              p = pathlib.PurePosixPath(info.filename)
-              if p.suffix.lower() not in allowed: continue
-              parts = [x for x in p.parts if x not in ('','.') and x != '..']
-              if not parts: continue
-              category = None
-              for part in reversed(parts[:-1]):
-                category = aliases.get(part.lower())
-                if category: break
-              if not category:
-                continue
-              folder = category.lower()
-              outdir = root / folder
-              outdir.mkdir(parents=True, exist_ok=True)
-              name = p.name
-              target = outdir / name
-              rel = f'{folder}/{name}'
-              if rel.lower() in known or target.exists():
-                continue
-              # Keep original image bytes and filename; avoid unsafe archive paths.
-              with z.open(info) as src, target.open('wb') as dst:
-                shutil.copyfileobj(src, dst)
-              title = re.sub(r'[_-]+', ' ', pathlib.Path(name).stem).strip()
-              title = ' '.join(w.capitalize() for w in title.split()) or f'{category} Wallpaper {next_id}'
-              records.append({'id': next_id, 'title': title, 'category': category, 'image': rel})
-              known.add(rel.lower())
-              next_id += 1
-              added += 1
-          if added == 0:
-            raise SystemExit('No new images were imported. Check the archive folder names/categories.')
-          catalogue.write_text(json.dumps(records, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          print(f'Imported {added} wallpapers; catalogue now has {len(records)} entries.')
+              image_infos = [
+                  info for info in z.infolist()
+                  if not info.is_dir() and pathlib.PurePosixPath(info.filename).suffix.lower() in allowed
+              ]
+              by_basename = collections.defaultdict(list)
+              for info in image_infos:
+                  by_basename[pathlib.PurePosixPath(info.filename).name].append(info)
+
+              missing = [name for name in source_names if len(by_basename.get(name, [])) == 0]
+              ambiguous = [name for name in source_names if len(by_basename.get(name, [])) > 1]
+              if missing or ambiguous:
+                  print('Missing manifest files:', missing)
+                  print('Ambiguous manifest files:', ambiguous)
+                  raise SystemExit(f'Archive verification failed: {len(missing)} missing, {len(ambiguous)} ambiguous.')
+
+              imported = []
+              for item in manifest:
+                  source = by_basename[item['source_file']][0]
+                  rel = pathlib.PurePosixPath(item['image'])
+                  if rel.is_absolute() or '..' in rel.parts:
+                      raise SystemExit(f'Unsafe output path in manifest: {item["image"]}')
+                  if str(item['image']).lower() in existing_images:
+                      raise SystemExit(f'Image path already exists in catalogue: {item["image"]}')
+                  target = root.joinpath(*rel.parts)
+                  if target.exists():
+                      raise SystemExit(f'Image file already exists; refusing to overwrite: {target}')
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with z.open(source) as src, target.open('wb') as dst:
+                      shutil.copyfileobj(src, dst)
+                  imported.append({
+                      'id': int(item['id']),
+                      'title': item['title'],
+                      'category': item['category'],
+                      'image': item['image']
+                  })
+
+          records.extend(imported)
+          catalogue.write_text(json.dumps(records, ensure_ascii=False, indent=2) + '\\n', encoding='utf-8')
+          print(f'Imported {len(imported)} wallpapers with approved titles/categories.')
+          print('Category totals:', dict(collections.Counter(x['category'] for x in imported)))
+          print(f'Catalogue now has {len(records)} entries.')
           PY
 
       - name: Commit imported wallpapers
@@ -79,5 +90,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --quiet && { echo "Nothing to commit"; exit 1; }
-          git commit -m "Import wallpaper collection"
+          git commit -m "Import approved NOIRIX wallpaper collection"
           git push
