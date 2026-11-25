@@ -2,6 +2,9 @@ name: Import NOIRIX wallpapers
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/NOIRIX_IMPORT_READY'
 
 permissions:
   contents: write
