@@ -1,0 +1,83 @@
+name: Import NOIRIX wallpapers
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download uploaded wallpaper archive
+        env:
+          ASSET_URL: https://github.com/carnitro02-spec/Noirix/releases/download/wallpaper-import/iamegs.zip
+        run: |
+          curl -fL --retry 3 "$ASSET_URL" -o /tmp/noirix-wallpapers.zip
+          unzip -l /tmp/noirix-wallpapers.zip | head -40
+
+      - name: Import images and update wallpaper catalogue
+        run: |
+          python3 - <<'PY'
+          import json, zipfile, pathlib, re, hashlib, shutil
+          archive = '/tmp/noirix-wallpapers.zip'
+          root = pathlib.Path('.')
+          catalogue = root / 'wallpapers.json'
+          records = json.loads(catalogue.read_text(encoding='utf-8'))
+          known = {str(x.get('image','')).lower() for x in records}
+          next_id = max([int(x.get('id', 0)) for x in records if str(x.get('id','')).isdigit()] + [0]) + 1
+          aliases = {
+            'car':'Cars','cars':'Cars','space':'Space','abstract':'Abstract',
+            'anime':'Anime','nature':'Nature','dark':'Dark','aesthetic':'Aesthetic',
+            'animals':'Animals','animal':'Animals','live':'Live','aura':'Aura'
+          }
+          allowed = {'.jpg','.jpeg','.png','.webp','.avif'}
+          added = 0
+          with zipfile.ZipFile(archive) as z:
+            for info in z.infolist():
+              if info.is_dir(): continue
+              p = pathlib.PurePosixPath(info.filename)
+              if p.suffix.lower() not in allowed: continue
+              parts = [x for x in p.parts if x not in ('','.') and x != '..']
+              if not parts: continue
+              category = None
+              for part in reversed(parts[:-1]):
+                category = aliases.get(part.lower())
+                if category: break
+              if not category:
+                continue
+              folder = category.lower()
+              outdir = root / folder
+              outdir.mkdir(parents=True, exist_ok=True)
+              name = p.name
+              target = outdir / name
+              rel = f'{folder}/{name}'
+              if rel.lower() in known or target.exists():
+                continue
+              # Keep original image bytes and filename; avoid unsafe archive paths.
+              with z.open(info) as src, target.open('wb') as dst:
+                shutil.copyfileobj(src, dst)
+              title = re.sub(r'[_-]+', ' ', pathlib.Path(name).stem).strip()
+              title = ' '.join(w.capitalize() for w in title.split()) or f'{category} Wallpaper {next_id}'
+              records.append({'id': next_id, 'title': title, 'category': category, 'image': rel})
+              known.add(rel.lower())
+              next_id += 1
+              added += 1
+          if added == 0:
+            raise SystemExit('No new images were imported. Check the archive folder names/categories.')
+          catalogue.write_text(json.dumps(records, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(f'Imported {added} wallpapers; catalogue now has {len(records)} entries.')
+          PY
+
+      - name: Commit imported wallpapers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add wallpapers.json cars space abstract anime nature dark aesthetic animals live aura
+          git diff --cached --quiet && { echo "Nothing to commit"; exit 1; }
+          git commit -m "Import wallpaper collection"
+          git push
