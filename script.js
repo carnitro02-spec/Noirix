@@ -25,6 +25,10 @@ let currentWallpaper = null;
 let searchTerm = "";
 let favorites = [];
 
+// Resolve every wallpaper from the GitHub Pages project root, not the current page URL.
+const wallpaperAssetUrl = path =>
+  new URL(`/Noirix/${String(path).replace(/^\\/+/, "")}`, window.location.origin).href;
+
 try {
   const saved = JSON.parse(localStorage.getItem("noirixFavorites") || "[]");
   if (Array.isArray(saved)) favorites = saved;
@@ -82,7 +86,7 @@ function renderWallpapers() {
     card.className = "wallpaper-card";
 
     const img = document.createElement("img");
-    img.src = wallpaper.image;
+    img.src = wallpaperAssetUrl(wallpaper.image);
     img.alt = wallpaper.title;
     img.loading = "lazy";
 
@@ -195,7 +199,7 @@ $("favoritesShortcut").addEventListener("click", () => {
 function openWallpaper(wallpaper) {
   currentWallpaper = wallpaper;
 
-  $("modalImage").src = wallpaper.image;
+  $("modalImage").src = wallpaperAssetUrl(wallpaper.image);
   $("modalTitle").textContent = wallpaper.title;
   $("modalCategory").textContent = wallpaper.category;
 
