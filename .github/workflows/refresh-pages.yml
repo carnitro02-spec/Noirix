@@ -1,0 +1,31 @@
+name: Refresh NOIRIX Pages after wallpaper repair
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/NOIRIX_PAGES_REFRESH'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate wallpaper catalogue and trigger Pages rebuild
+        run: |
+          python3 - <<'PY'
+          import json
+          with open('wallpapers.json', encoding='utf-8') as f:
+              data = json.load(f)
+          assert isinstance(data, list) and len(data) == 192, f'Unexpected wallpaper count: {len(data)}'
+          print(f'Valid catalogue: {len(data)} wallpapers')
+          PY
+          printf '\n<!-- Pages refresh after wallpaper JSON repair: %s -->\n' "$(date -u +%FT%TZ)" >> README.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Trigger Pages rebuild for repaired wallpaper catalogue"
+          git push
