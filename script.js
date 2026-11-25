@@ -88,9 +88,11 @@ function renderWallpapers() {
     const img = document.createElement("img");
     img.src = wallpaperAssetUrl(wallpaper.image);
     img.alt = wallpaper.title;
-    img.loading = index < 4 ? "eager" : "lazy";
+    // Start loading every gallery image as soon as the page opens.
+    // Give the first six visible images the highest browser priority.
+    img.loading = "eager";
     img.decoding = "async";
-    if (index < 4) img.fetchPriority = "high";
+    if (index < 6) img.fetchPriority = "high";
 
     img.addEventListener("error", () => {
       img.style.opacity = ".25";
