@@ -81,14 +81,16 @@ function renderWallpapers() {
     filtered.length > 0
   );
 
-  filtered.forEach(wallpaper => {
+  filtered.forEach((wallpaper, index) => {
     const card = document.createElement("article");
     card.className = "wallpaper-card";
 
     const img = document.createElement("img");
     img.src = wallpaperAssetUrl(wallpaper.image);
     img.alt = wallpaper.title;
-    img.loading = "lazy";
+    img.loading = index < 4 ? "eager" : "lazy";
+    img.decoding = "async";
+    if (index < 4) img.fetchPriority = "high";
 
     img.addEventListener("error", () => {
       img.style.opacity = ".25";
@@ -199,6 +201,7 @@ $("favoritesShortcut").addEventListener("click", () => {
 function openWallpaper(wallpaper) {
   currentWallpaper = wallpaper;
 
+  $("modalImage").decoding = "async";
   $("modalImage").src = wallpaperAssetUrl(wallpaper.image);
   $("modalTitle").textContent = wallpaper.title;
   $("modalCategory").textContent = wallpaper.category;
