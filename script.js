@@ -270,7 +270,7 @@ $("downloadBtn").addEventListener("click", async () => {
   }
 
   setTimeout(() => {
-    button.textContent = "↓ DOWNLOAD WALLPAPER";
+    button.textContent = "↓ FREE DOWNLOAD";
     button.disabled = false;
   }, 2000);
 });
