@@ -221,6 +221,12 @@ function openWallpaper(wallpaper) {
   $("modalDescription").classList.add("collapsed");
   $("descriptionToggle").textContent = "View more";
   $("descriptionToggle").setAttribute("aria-expanded", "false");
+  $("descriptionToggle").classList.add("hidden");
+  requestAnimationFrame(() => {
+    if ($("modalDescription").scrollHeight > $("modalDescription").clientHeight + 1) {
+      $("descriptionToggle").classList.remove("hidden");
+    }
+  });
 
   updateModalFavorite();
   $("wallpaperModal").classList.remove("hidden");
