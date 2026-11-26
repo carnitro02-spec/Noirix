@@ -1,0 +1,53 @@
+name: Inspect NOIRIX wallpaper archive
+on:
+  push:
+    paths:
+      - '.github/NOIRIX_AURA_INSPECT_READY'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download original archive
+        run: |
+          curl -fL --retry 3 "https://github.com/carnitro02-spec/Noirix/releases/download/wallpaper-import/iamegs.zip" -o /tmp/iamegs.zip
+      - name: Build labeled contact sheets
+        run: |
+          python3 -m pip install pillow
+          python3 - <<'PY'
+          import zipfile, io, pathlib, math
+          from PIL import Image, ImageDraw
+          z=zipfile.ZipFile('/tmp/iamegs.zip')
+          allowed={'.jpg','.jpeg','.png','.webp','.avif'}
+          files=[n for n in z.namelist() if pathlib.PurePosixPath(n).suffix.lower() in allowed]
+          out=pathlib.Path('/tmp/aura-inspection'); out.mkdir()
+          print('IMAGE_COUNT',len(files))
+          with open(out/'archive-files.txt','w') as f: f.write('\n'.join(files))
+          # All files in contact sheets so the intended Aura designs can be visually identified.
+          for batch_start in range(0,len(files),60):
+            batch=files[batch_start:batch_start+60]
+            cell_w,cell_h=180,270
+            cols=6; rows=math.ceil(len(batch)/cols)
+            sheet=Image.new('RGB',(cols*cell_w,rows*cell_h),'white')
+            d=ImageDraw.Draw(sheet)
+            for j,name in enumerate(batch):
+              try:
+                im=Image.open(io.BytesIO(z.read(name))).convert('RGB')
+                im.thumbnail((cell_w-12,cell_h-42))
+                x=(j%cols)*cell_w+(cell_w-im.width)//2
+                y=(j//cols)*cell_h+4
+                sheet.paste(im,(x,y))
+                label=pathlib.PurePosixPath(name).name
+                d.text(((j%cols)*cell_w+4,(j//cols)*cell_h+cell_h-32),label[:27],fill='black')
+                d.text(((j%cols)*cell_w+4,(j//cols)*cell_h+cell_h-17),f'ZIP index {batch_start+j}',fill='black')
+              except Exception as e:
+                d.text(((j%cols)*cell_w+4,(j//cols)*cell_h+8),f'ERROR {name[:20]}',fill='red')
+            sheet.save(out/f'contact-{batch_start//60+1}.jpg',quality=88)
+          PY
+      - name: Upload inspection files
+        uses: actions/upload-artifact@v4
+        with:
+          name: noirix-aura-inspection
+          path: /tmp/aura-inspection/
+          retention-days: 2
