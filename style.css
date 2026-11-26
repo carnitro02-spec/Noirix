@@ -565,6 +565,27 @@ a { text-decoration: none; color: inherit; }
   max-width: 520px;
 }
 
+.wallpaper-description.collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+.description-toggle {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--purple-light);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.description-toggle.hidden { display: none !important; }
+
 .heart-btn {
   background: var(--panel2);
   border: 1px solid var(--border);
