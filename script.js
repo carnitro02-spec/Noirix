@@ -80,6 +80,15 @@ function renderWallpapers() {
     "hidden",
     filtered.length > 0
   );
+  if (currentCategory === "Live") {
+    $("emptyState").querySelector("span").textContent = "✦";
+    $("emptyState").querySelector("h3").textContent = "Coming Soon";
+    $("emptyState").querySelector("p").textContent = "Live wallpapers are coming soon to NOIRIX.";
+  } else {
+    $("emptyState").querySelector("span").textContent = "⌕";
+    $("emptyState").querySelector("h3").textContent = "No wallpapers found";
+    $("emptyState").querySelector("p").textContent = "Try another category or search.";
+  }
 
   filtered.forEach((wallpaper, index) => {
     const card = document.createElement("article");
@@ -207,7 +216,11 @@ function openWallpaper(wallpaper) {
   $("modalImage").src = wallpaperAssetUrl(wallpaper.image);
   $("modalTitle").textContent = wallpaper.title;
   $("modalCategory").textContent = wallpaper.category;
-  $("modalDescription").textContent = wallpaper.description || "";
+  const description = wallpaper.description || "";
+  $("modalDescription").textContent = description;
+  $("modalDescription").classList.add("collapsed");
+  $("descriptionToggle").textContent = "View more";
+  $("descriptionToggle").setAttribute("aria-expanded", "false");
 
   updateModalFavorite();
   $("wallpaperModal").classList.remove("hidden");
@@ -230,6 +243,13 @@ $("modalFavorite").addEventListener("click", () => {
   if (currentWallpaper) {
     toggleFavorite(currentWallpaper.id);
   }
+});
+
+$("descriptionToggle").addEventListener("click", () => {
+  const description = $("modalDescription");
+  const expanded = description.classList.toggle("collapsed") === false;
+  $("descriptionToggle").textContent = expanded ? "View less" : "View more";
+  $("descriptionToggle").setAttribute("aria-expanded", String(expanded));
 });
 
 // Download
