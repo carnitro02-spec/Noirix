@@ -207,6 +207,7 @@ function openWallpaper(wallpaper) {
   $("modalImage").src = wallpaperAssetUrl(wallpaper.image);
   $("modalTitle").textContent = wallpaper.title;
   $("modalCategory").textContent = wallpaper.category;
+  $("modalDescription").textContent = wallpaper.description || "";
 
   updateModalFavorite();
   $("wallpaperModal").classList.remove("hidden");
