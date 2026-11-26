@@ -557,6 +557,14 @@ a { text-decoration: none; color: inherit; }
 
 .modal-details h2 { font-size: 18px; }
 
+.wallpaper-description {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 7px;
+  max-width: 520px;
+}
+
 .heart-btn {
   background: var(--panel2);
   border: 1px solid var(--border);
